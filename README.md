@@ -1,6 +1,6 @@
 # Fake_HYT_MDM
 
-本项目基于https://github.com/ytlzq0228/Fake_HYT_MDM优化了说明文档及部署相关配置。
+本项目基于https://github.com/ytlzq0228/Fake_HYT_MDM 优化了说明文档及部署相关配置。
 
 一个基于逆向工程的 Hytera SmartMDM 服务器模拟器，用于学习和研究海能达 PDC 系列对讲机的 MDM（移动设备管理）协议。
 
@@ -306,7 +306,6 @@ uvicorn MDM:app --reload --host 0.0.0.0 --port 2232
 
 ---
 
-**项目仓库**: [https://github.com/espie2023/Fake_HYT_MDM](https://github.com/ytlzq0228/Fake_HYT_MDM)
+**项目仓库**: https://github.com/ytlzq0228/Fake_HYT_MDM
 
-**问题反馈**: [https://github.com/espie2023/Fake_HYT_MDM/issues
-](https://github.com/ytlzq0228/Fake_HYT_MDM)
+**问题反馈**: https://github.com/ytlzq0228/Fake_HYT_MDM
