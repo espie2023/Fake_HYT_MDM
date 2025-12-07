@@ -285,6 +285,23 @@ async def chunked_data_null(request: Request):
     #return chunked_response_data_null()
 
 
+def reduce_location_precision(lat, lon, precision=2):
+    """
+    降低经纬度精度以保护隐私
+    :param lat: 纬度
+    :param lon: 经度
+    :param precision: 小数点后保留位数（默认2位，约1.1公里精度）
+    :return: 处理后的经纬度字符串
+    """
+    try:
+        lat_float = float(lat)
+        lon_float = float(lon)
+        lat_reduced = f"{lat_float:.{precision}f}"
+        lon_reduced = f"{lon_float:.{precision}f}"
+        return lat_reduced, lon_reduced
+    except (ValueError, TypeError):
+        return lat, lon
+
 @app.post("/nrm/androidTask/uploadLocationInfo")
 async def uploadLocationInfo(request: Request):
     body = await request.body()
@@ -298,9 +315,17 @@ async def uploadLocationInfo(request: Request):
             raise ValueError("no deviceId")
         if float(req_data.get("latitude"))==0 and float(req_data.get("longitude"))==0:
             raise ValueError("invalid latitude or longitude")
+
+        # 降低经纬度精度以保护隐私（小数点后2位，约1.1公里精度）
+        original_lat = req_data.get("latitude")
+        original_lon = req_data.get("longitude")
+        reduced_lat, reduced_lon = reduce_location_precision(original_lat, original_lon, precision=2)
+
+        print(f"[Privacy] Original: ({original_lat}, {original_lon}) -> Reduced: ({reduced_lat}, {reduced_lon})")
+
         location_data = {
-            "latitude": req_data.get("latitude"),
-            "longitude": req_data.get("longitude"),
+            "latitude": reduced_lat,
+            "longitude": reduced_lon,
             "altitude": req_data.get("altitude"),
             "update_time": int(time.time())
         }

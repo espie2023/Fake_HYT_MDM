@@ -69,7 +69,7 @@
             <!-- 设备信息卡片 -->
             <h2>
                 <a href="/device?deviceid={{ device_id }}" style="text-decoration: none; color: inherit;">
-                    {{ entry.deviceInfo.wholeInfo.alias if entry.deviceInfo.wholeInfo and entry.deviceInfo.wholeInfo.alias else device_id }}
+                    {{ entry.get('deviceInfo', {}).get('wholeInfo', {}).get('alias', device_id) }}
                 </a>
             </h2>
             <!-- 按钮区 -->
@@ -106,8 +106,8 @@
             </p>
             <p><strong>Device ID:</strong> {{ device_id }}</p>
             <p><strong>Version:</strong> {{ entry.versionCode or "N/A" }}</p>
-            {% set bb = entry.deviceInfo.get("bbInfo", {}) %}
-            {% set whole = entry.deviceInfo.get("wholeInfo", {}) %}
+            {% set bb = entry.get('deviceInfo', {}).get("bbInfo", {}) %}
+            {% set whole = entry.get('deviceInfo', {}).get("wholeInfo", {}) %}
             {% if whole.modelName %}<p><strong>Model:</strong> {{ whole.modelName }}</p>{% endif %}
             {% if bb.androidVersion %}<p><strong>Android:</strong> {{ bb.androidVersion }}</p>{% endif %}
             {% if bb.cpuModel %}<p><strong>CPU:</strong> {{ bb.cpuModel }}</p>{% endif %}
@@ -247,7 +247,7 @@
             <h2>
                 <a href="/dashboard?filter_device={{ device_id }}&map={{ map_type }}"
                    style="text-decoration: none; color: inherit;">
-                    {{ entry.deviceInfo.wholeInfo.alias if entry.deviceInfo.wholeInfo and entry.deviceInfo.wholeInfo.alias else device_id }}
+                    {{ entry.get('deviceInfo', {}).get('wholeInfo', {}).get('alias', device_id) }}
                 </a>
             </h2>
 
@@ -263,8 +263,8 @@
             <p><strong>Device ID:</strong> {{ device_id }}</p>
             <p><strong>Version:</strong> {{ entry.versionCode or "N/A" }}</p>
 
-            {% set bb = entry.deviceInfo.get("bbInfo", {}) %}
-            {% set whole = entry.deviceInfo.get("wholeInfo", {}) %}
+            {% set bb = entry.get('deviceInfo', {}).get("bbInfo", {}) %}
+            {% set whole = entry.get('deviceInfo', {}).get("wholeInfo", {}) %}
 
             {% if whole.modelName %}<p><strong>Model:</strong> {{ whole.modelName }}</p>{% endif %}
             {% if bb.androidVersion %}<p><strong>Android:</strong> {{ bb.androidVersion }}</p>{% endif %}

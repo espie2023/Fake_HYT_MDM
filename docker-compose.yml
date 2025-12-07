@@ -6,7 +6,10 @@ services:
     container_name: mdm
     ports:
       - "2232:2232"
+      - "2233:2233"
     volumes:
       - ./data:/app/data
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./utils:/app/utils
+      - ./MDM.py:/app/MDM.py

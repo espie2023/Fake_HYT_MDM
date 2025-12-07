@@ -3,7 +3,7 @@ import os
 import time
 import re
 import configparser
-import aprs
+import aprslib
 import requests
 import json
 from typing import Optional
@@ -134,30 +134,31 @@ def aprs_report(lat_input, lon_input, alt_input, device_name, issiRadioId, devic
 
 
 		print(f"[APRS_Service]device_ssid:{device_ssid}")
-		frame_text=(f'{device_ssid}>PYTHON,TCPIP*,qAC,{device_ssid}:!{lat}{lat_dir}/{lon}{lon_dir}{ssid_icon}/A={altitude} APRS by Hytera MDM from {device_name} report').encode()
+		frame_text=f'{device_ssid}>PYTHON,TCPIP*,qAC,{device_ssid}:!{lat}{lat_dir}/{lon}{lon_dir}{ssid_icon}/A={altitude} APRS by Hytera MDM from {device_name} report'
 		#frame_text=(f'{SSID}>PYTHON,TCPIP*,qAC,{SSID}:!{lat}{lat_dir}/{lon}{lon_dir}{SSID_ICON}{course}/{speed}/A={altitude} APRS by RPI with GNSS {GNSS_Type} at UTC {NMEA_timestamp} {Message}').encode()
-		callsign = CALLSIGN.encode('utf-8')
-		password = APRS_PASSWORD.encode('utf-8')
-		
-		# 定义 APRS 服务器地址和端口（字节形式）
-		server_host = APRS_Server.encode('utf-8')  # 使用 rotate.aprs2.net 服务器和端口 14580
+		callsign = CALLSIGN
+		password = APRS_PASSWORD
+
+		# 定义 APRS 服务器地址和端口
+		server_parts = APRS_Server.split(':')
+		server_host = server_parts[0]
+		server_port = int(server_parts[1]) if len(server_parts) > 1 else 14580
 
 		#----------------test_only,线上环境一定要删------------------------
 		#return device_ssid
 		#----------------test_only,线上环境一定要删------------------------
-		
-		# 创建 TCP 对象并传入服务器信息
-		a = aprs.TCP(callsign, password, servers=[server_host])
-		#a = aprs.TCP(callsign, password)
-		a.start()
-		aprs_return=a.send(frame_text)
-		if aprs_return==len(frame_text)+2:
-			print('[APRS_Service]APRS Report Good Length:%s'%aprs_return)
-		else:
-			print('[APRS_Service]APRS Report Return:%s Frame Length: %s Bad Request..'%(aprs_return,frame_text))
+
+		# 使用aprslib创建连接并发送数据
+		AIS = aprslib.IS(callsign, passwd=password, host=server_host, port=server_port)
+		AIS.connect()
+		AIS.sendall(frame_text)
+		print(f'[APRS_Service]APRS Report Sent Successfully. Frame: {frame_text}')
+		AIS.close()
 		
 	except Exception as err:
+		import traceback
 		print(f"[APRS_Service]APRS Report Error: {err}")
+		traceback.print_exc()
 	finally:
 		return device_ssid
 
