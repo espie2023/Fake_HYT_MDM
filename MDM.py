@@ -515,18 +515,35 @@ async def verify_device_sn(
 
 @app.get("/change_aprs_ssid", response_class=HTMLResponse)
 async def change_aprs_ssid_form(request: Request, device_id: str = Query(...)):
+    # 安全检查：必须登录才能修改APRS SSID
     user = get_logged_in_user(request)
-    skip_sn = False
+    if not user:
+        return HTMLResponse("""
+            <h3>访问被拒绝</h3>
+            <p>您必须登录才能修改APRS SSID</p>
+            <a href="/admin/login"><button style="margin-top: 10px;">前往登录</button></a>
+        """, status_code=403)
 
-    if user:
-        allowed = GLOBAL_CONFIG["sys_admin"].get(user, {}).get("devices", [])
-        if "any" in allowed or device_id in allowed:
-            skip_sn = True
-    now_device_ssid=""
+    # 权限检查：验证用户是否有权访问该设备
+    device_scope = get_user_device_scope(user)
+    if "any" not in device_scope and device_id not in device_scope:
+        return HTMLResponse("""
+            <h3>访问被拒绝</h3>
+            <p>您没有权限修改此设备的APRS SSID</p>
+            <a href="/admin/dashboard"><button style="margin-top: 10px;">返回管理后台</button></a>
+        """, status_code=403)
+
+    skip_sn = False
+    allowed = GLOBAL_CONFIG["sys_admin"].get(user, {}).get("devices", [])
+    if "any" in allowed or device_id in allowed:
+        skip_sn = True
+
+    now_device_ssid = ""
+    now_device_icon = ""
     if device_id:
         entry = data_memory_cache.get_device_entry(device_id)
-        now_device_ssid = entry.get("location", {}).get("aprs_ssid","")
-        now_device_icon = entry.get("location", {}).get("aprs_icon","")
+        now_device_ssid = entry.get("location", {}).get("aprs_ssid", "")
+        now_device_icon = entry.get("location", {}).get("aprs_icon", "")
 
     return templates.TemplateResponse("change_aprs_ssid.html", {
         "request": request,
@@ -544,6 +561,15 @@ async def change_aprs_ssid_submit(
     aprs_ssid: str = Form(...),
     aprs_icon: str = Form(default="Q")
 ):
+    # 安全检查：必须登录才能修改APRS SSID
+    user = get_logged_in_user(request)
+    if not user:
+        return HTMLResponse("""
+            <h3>访问被拒绝</h3>
+            <p>您必须登录才能修改APRS SSID</p>
+            <a href="/admin/login"><button style="margin-top: 10px;">前往登录</button></a>
+        """, status_code=403)
+
     entry = data_memory_cache.get_device_entry(device_id)
     if not entry:
         return HTMLResponse("""
@@ -551,17 +577,13 @@ async def change_aprs_ssid_submit(
             <button onclick="history.back()" style="margin-top: 10px;">返回</button>
         """, status_code=404)
 
-    user = get_logged_in_user(request)
-    skip_sn = False
-    if user:
-        allowed = GLOBAL_CONFIG["sys_admin"].get(user, {}).get("devices", [])
-        if "any" in allowed or device_id in allowed:
-            skip_sn = True
-
-    if not skip_sn and sn != entry.get("sn"):
+    # 权限检查：验证用户是否有权访问该设备
+    device_scope = get_user_device_scope(user)
+    if "any" not in device_scope and device_id not in device_scope:
         return HTMLResponse("""
-            <h3>SN 验证失败</h3>
-            <button onclick="history.back()" style="margin-top: 10px;">返回</button>
+            <h3>访问被拒绝</h3>
+            <p>您没有权限修改此设备的APRS SSID</p>
+            <a href="/admin/dashboard"><button style="margin-top: 10px;">返回管理后台</button></a>
         """, status_code=403)
 
     try:
