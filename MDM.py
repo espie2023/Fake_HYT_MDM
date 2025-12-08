@@ -591,6 +591,14 @@ async def admin_login(
     return response
 
 
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    """登出功能：清除 Cookie 并重定向到首页"""
+    response = RedirectResponse(url="/dashboard", status_code=302)
+    response.delete_cookie("admin_token")
+    return response
+
+
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
     username = get_logged_in_user(request)
@@ -819,75 +827,78 @@ async def update_task_templates(
     return RedirectResponse("/admin/taskcenter?msg=模板已更新", status_code=303)
 
 
-@app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request, device_id: Optional[str] = None, msg: Optional[str] = None):
-    return templates.TemplateResponse(
-        "register.html",
-        {"request": request, "device_id": device_id or "", "msg": msg or ""},
-    )
-
-
-@app.post("/register", response_class=HTMLResponse)
-async def register_submit(
-    request: Request,
-    device_id: str = Form(...),
-    sn: str = Form(...),
-    username: str = Form(...),
-    password_hash: str = Form(...),
-):
-    device_id = device_id.strip()
-    sn = sn.strip()
-    username = username.strip()
-    password_hash = password_hash.strip().lower()
-
-    if not USERNAME_RE.match(username):
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "device_id": device_id, "msg": "用户名不合法（3-32位，允许字母/数字/._-）"},
-            status_code=400
-        )
-
-    if not SHA256_HEX_RE.match(password_hash):
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "device_id": device_id, "msg": "密码格式错误：需要SHA-256十六进制哈希"},
-            status_code=400
-        )
-
-    # 直接用 data_memory_cache 获取设备信息
-    entry = data_memory_cache.get_device_entry(device_id)
-    if not entry:
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "device_id": device_id, "msg": "设备不存在"},
-            status_code=404
-        )
-
-    real_sn = entry.get("sn")
-    if sn != real_sn:
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "device_id": device_id, "msg": "SN 校验失败"},
-            status_code=400
-        )
-
-    # 检查用户是否存在
-    if username in GLOBAL_CONFIG.get("sys_admin", {}):
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "device_id": device_id, "msg": "注册失败：用户名已存在"},
-            status_code=400
-        )
-
-    # 新增用户
-    GLOBAL_CONFIG.setdefault("sys_admin", {})[username] = {
-        "password": password_hash,
-        "devices": [device_id],  # 或改为 ["any"]
-        "map_type": "openstreet"
-    }
-    save_global_config_atomic()
-
-    return RedirectResponse(url="/admin/login?ok=1", status_code=303)
+# 注册功能已禁用 - 为了安全考虑，不允许公开注册新用户
+# 如需添加新用户，请管理员登录后使用设备注册功能，或直接修改配置文件
+#
+# @app.get("/register", response_class=HTMLResponse)
+# async def register_page(request: Request, device_id: Optional[str] = None, msg: Optional[str] = None):
+#     return templates.TemplateResponse(
+#         "register.html",
+#         {"request": request, "device_id": device_id or "", "msg": msg or ""},
+#     )
+#
+#
+# @app.post("/register", response_class=HTMLResponse)
+# async def register_submit(
+#     request: Request,
+#     device_id: str = Form(...),
+#     sn: str = Form(...),
+#     username: str = Form(...),
+#     password_hash: str = Form(...),
+# ):
+#     device_id = device_id.strip()
+#     sn = sn.strip()
+#     username = username.strip()
+#     password_hash = password_hash.strip().lower()
+#
+#     if not USERNAME_RE.match(username):
+#         return templates.TemplateResponse(
+#             "register.html",
+#             {"request": request, "device_id": device_id, "msg": "用户名不合法（3-32位，允许字母/数字/._-）"},
+#             status_code=400
+#         )
+#
+#     if not SHA256_HEX_RE.match(password_hash):
+#         return templates.TemplateResponse(
+#             "register.html",
+#             {"request": request, "device_id": device_id, "msg": "密码格式错误：需要SHA-256十六进制哈希"},
+#             status_code=400
+#         )
+#
+#     # 直接用 data_memory_cache 获取设备信息
+#     entry = data_memory_cache.get_device_entry(device_id)
+#     if not entry:
+#         return templates.TemplateResponse(
+#             "register.html",
+#             {"request": request, "device_id": device_id, "msg": "设备不存在"},
+#             status_code=404
+#         )
+#
+#     real_sn = entry.get("sn")
+#     if sn != real_sn:
+#         return templates.TemplateResponse(
+#             "register.html",
+#             {"request": request, "device_id": device_id, "msg": "SN 校验失败"},
+#             status_code=400
+#         )
+#
+#     # 检查用户是否存在
+#     if username in GLOBAL_CONFIG.get("sys_admin", {}):
+#         return templates.TemplateResponse(
+#             "register.html",
+#             {"request": request, "device_id": device_id, "msg": "注册失败：用户名已存在"},
+#             status_code=400
+#         )
+#
+#     # 新增用户
+#     GLOBAL_CONFIG.setdefault("sys_admin", {})[username] = {
+#         "password": password_hash,
+#         "devices": [device_id],  # 或改为 ["any"]
+#         "map_type": "openstreet"
+#     }
+#     save_global_config_atomic()
+#
+#     return RedirectResponse(url="/admin/login?ok=1", status_code=303)
 
 
 @app.get("/admin/device_register", response_class=HTMLResponse)

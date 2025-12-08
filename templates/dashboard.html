@@ -14,8 +14,11 @@
     <!-- 登录状态按钮 -->
     <div class="map-toggle" style="position: absolute; top: 25px; right: 300px; z-index: 10;">
         {% if logged_in_user %}
-            <a href="/admin/dashboard" style="background-color: #007acc; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight:   bold;">
+            <a href="/admin/dashboard" style="background-color: #007acc; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-right: 8px;">
                 {{ logged_in_user }}
+            </a>
+            <a href="/admin/logout" style="background-color: #dc3545; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                登出
             </a>
         {% else %}
             <a href="/admin/login" style="background-color: #ccc; color: #333; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: bold;">
@@ -68,35 +71,15 @@
         <div class="device-info">
             <!-- 设备信息卡片 -->
             <h2>
+                {% if logged_in_user %}
                 <a href="/device?deviceid={{ device_id }}" style="text-decoration: none; color: inherit;">
                     {{ entry.get('deviceInfo', {}).get('wholeInfo', {}).get('alias', device_id) }}
                 </a>
-            </h2>
-            <!-- 按钮区 -->
-            <span style="display:inline-flex; gap:8px; align-items:center;">
-              <!-- 查看原始 JSON -->
-              <a href="/device?deviceid={{ device_id }}"
-                 target="_blank"
-                 style="display:inline-block; padding:4px 8px; border-radius:4px; background:#6c757d; color:#fff; text-decoration:none;">
-                 查看原始 JSON
-              </a>
-            
-              {% if not logged_in_user %}
-                <!-- 未登录：去注册账号，并预填 device_id -->
-                <a href="/register?device_id={{ device_id }}"
-                   style="display:inline-block; padding:4px 8px; border-radius:4px; background:#0f62fe; color:#fff; text-decoration:none;">
-                   以此设备注册用户
-                </a>
-              {% else %}
-                {% if device_id not in allowed_devices %}
-                  <!-- 已登录但不在自己名下：显示注册按钮 -->
-                  <a href="/admin/device_register?device_id={{ device_id }}"
-                     style="display:inline-block; padding:4px 8px; border-radius:4px; background:#198754; color:#fff; text-decoration:none;">
-                     注册此设备到我的账户
-                  </a>
+                {% else %}
+                    {{ entry.get('deviceInfo', {}).get('wholeInfo', {}).get('alias', device_id) }}
                 {% endif %}
-              {% endif %}
-            </span>
+            </h2>
+
             {% set last_update = now - entry.update_time %}
             <p>
                 <strong>Last Update:</strong>
@@ -104,11 +87,33 @@
                     {{ last_update }}s ago — {{ 'Online' if last_update <= 600 else 'Offline' }}
                 </span>
             </p>
+
+            {% set whole = entry.get('deviceInfo', {}).get("wholeInfo", {}) %}
+            {% if whole.modelName %}<p><strong>Model:</strong> {{ whole.modelName }}</p>{% endif %}
+
+            {% if logged_in_user %}
+            <!-- 已登录用户：显示完整信息 -->
+            <!-- 按钮区 -->
+            <span style="display:inline-flex; gap:8px; align-items:center; margin-top: 10px;">
+              <!-- 查看原始 JSON -->
+              <a href="/device?deviceid={{ device_id }}"
+                 target="_blank"
+                 style="display:inline-block; padding:4px 8px; border-radius:4px; background:#6c757d; color:#fff; text-decoration:none;">
+                 查看原始 JSON
+              </a>
+
+              {% if device_id not in allowed_devices %}
+                <!-- 已登录但不在自己名下：显示注册按钮 -->
+                <a href="/admin/device_register?device_id={{ device_id }}"
+                   style="display:inline-block; padding:4px 8px; border-radius:4px; background:#198754; color:#fff; text-decoration:none;">
+                   注册此设备到我的账户
+                </a>
+              {% endif %}
+            </span>
+
             <p><strong>Device ID:</strong> {{ device_id }}</p>
             <p><strong>Version:</strong> {{ entry.versionCode or "N/A" }}</p>
             {% set bb = entry.get('deviceInfo', {}).get("bbInfo", {}) %}
-            {% set whole = entry.get('deviceInfo', {}).get("wholeInfo", {}) %}
-            {% if whole.modelName %}<p><strong>Model:</strong> {{ whole.modelName }}</p>{% endif %}
             {% if bb.androidVersion %}<p><strong>Android:</strong> {{ bb.androidVersion }}</p>{% endif %}
             {% if bb.cpuModel %}<p><strong>CPU:</strong> {{ bb.cpuModel }}</p>{% endif %}
             {% if bb.ip %}<p><strong>IP:</strong> {{ bb.ip }}</p>{% endif %}
@@ -169,42 +174,51 @@
                 <a href="/change_aprs_ssid?device_id={{ device_id }}" style="margin-left: 10px;"><button type="button">Change APRS SSID</button></a>
             </p>
             {% endif %}
+            {% else %}
+            <!-- 未登录用户：仅显示基本信息，并提示登录 -->
+            <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                <p style="color: #856404; margin: 0;">
+                    <strong>⚠️ 更多详细信息需要登录后查看</strong><br>
+                    <span style="font-size: 14px;">登录后可查看设备完整信息、GPS位置、电池状态等详细数据</span>
+                </p>
+            </div>
+            {% endif %}
         </div>
         <div class="device-map">
             <!--Biadu Map-->
-            {% if entry.location %}
+            {% if logged_in_user and entry.location %}
                 {% if map_type == "baidu" %}
                     {% set lat = entry.location.latitude | float %}
                     {% set lon = entry.location.longitude | float %}
                     {% set alias = entry.deviceInfo.wholeInfo.alias if entry.deviceInfo and entry.deviceInfo.wholeInfo else device_id %}
-                    
+
                     <div id="bdmap_device" style="width: 100%; height: 700px; border: 1px solid #ccc; border-radius: 8px;"></div>
-                    
+
                     <script type="text/javascript">
                     (function() {
                         const wgsLat = {{ lat }};
                         const wgsLon = {{ lon }};
                         const alias = "{{ alias }}";
-                    
+
                         const map = new BMap.Map("bdmap_device");
                         map.enableScrollWheelZoom(true);
-                    
+
                         // 原始 WGS84 点
                         const wgsPoint = new BMap.Point(wgsLon, wgsLat);
-                    
+
                         // 调用坐标转换器
                         const convertor = new BMap.Convertor();
                         convertor.translate([wgsPoint], 1, 5, function(data) {
                             if (data.status === 0) {
                                 const bdPoint = data.points[0];
                                 map.centerAndZoom(bdPoint, 15);
-                    
+
                                 const marker = new BMap.Marker(bdPoint);
                                 map.addOverlay(marker);
-                    
+
                                 const infoContent = `<b>${alias}</b><br/>原始坐标 (WGS-84):<br/>纬度: ${wgsLat}<br/>经度: ${wgsLon}`;
                                 const infoWindow = new BMap.InfoWindow(infoContent);
-                    
+
                                 marker.addEventListener("click", function() {
                                     map.openInfoWindow(infoWindow, bdPoint);
                                 });
@@ -231,8 +245,18 @@
                             在 OpenStreetMap 上查看大图
                         </a>
                     </small>
-                {% endif %}  
-
+                {% endif %}
+            {% elif not logged_in_user %}
+                <!-- 未登录用户不显示地图 -->
+                <div style="width: 100%; height: 700px; border: 1px solid #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                    <div style="text-align: center; color: #6c757d;">
+                        <h3>🔒 地图和位置信息</h3>
+                        <p>登录后可查看设备实时位置和地图</p>
+                        <a href="/admin/login" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #007acc; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                            立即登录
+                        </a>
+                    </div>
+                </div>
             {% endif %}
         </div>
         {% endif %}
@@ -260,13 +284,15 @@
                 </span>
             </p>
 
-            <p><strong>Device ID:</strong> {{ device_id }}</p>
-            <p><strong>Version:</strong> {{ entry.versionCode or "N/A" }}</p>
-
             {% set bb = entry.get('deviceInfo', {}).get("bbInfo", {}) %}
             {% set whole = entry.get('deviceInfo', {}).get("wholeInfo", {}) %}
 
             {% if whole.modelName %}<p><strong>Model:</strong> {{ whole.modelName }}</p>{% endif %}
+
+            {% if logged_in_user %}
+            <!-- 已登录用户：显示完整信息 -->
+            <p><strong>Device ID:</strong> {{ device_id }}</p>
+            <p><strong>Version:</strong> {{ entry.versionCode or "N/A" }}</p>
             {% if bb.androidVersion %}<p><strong>Android:</strong> {{ bb.androidVersion }}</p>{% endif %}
             {% if bb.cpuModel %}<p><strong>CPU:</strong> {{ bb.cpuModel }}</p>{% endif %}
             {% if bb.ip %}<p><strong>IP:</strong> {{ bb.ip }}</p>{% endif %}
@@ -330,8 +356,7 @@
               <a href="https://aprs.fi/#!call=a%2F{{ entry.location.aprs_ssid }}" target="_blank">
                 <strong>{{ entry.location.aprs_ssid }}</strong>
               </a>
-            
-              
+
               {% if device_id %}
                 <a href="/change_aprs_ssid?device_id={{ device_id }}" style="margin-left: 10px;">
                   <button type="button">Change APRS SSID</button>
@@ -400,6 +425,15 @@
                     </a>
                 </small>
             {% endif %}
+            {% endif %}
+            {% else %}
+            <!-- 未登录用户：显示提示信息 -->
+            <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; margin-top: 10px; text-align: center;">
+                <p style="color: #6c757d; margin: 0; font-size: 14px;">
+                    🔒 <strong>登录后查看更多信息</strong><br>
+                    <span style="font-size: 12px;">包括GPS位置、地图、详细硬件信息等</span>
+                </p>
+            </div>
             {% endif %}
         </div>
         {% endif %}
