@@ -198,6 +198,46 @@
             </div>
         </form>
         </div>
+
+        <div class="password-change">
+            <h3>隐私保护设置</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                配置GPS位置存储精度，保护设备位置隐私
+            </p>
+            <form method="POST" action="/admin/update_location_precision">
+                <input type="hidden" name="username" value="{{ username }}">
+                <div class="form-group">
+                    <label for="location_precision">GPS位置精度</label>
+                    <select name="location_precision" id="location_precision" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="-1" {% if location_precision == -1 %}selected{% endif %}>不保护（原始精度，小数点后5-6位）</option>
+                        <option value="3" {% if location_precision == 3 %}selected{% endif %}>高精度（小数点后3位，约110米）</option>
+                        <option value="2" {% if location_precision == 2 %}selected{% endif %}>中精度（小数点后2位，约1.1公里）</option>
+                        <option value="1" {% if location_precision == 1 %}selected{% endif %}>低精度（小数点后1位，约11公里）</option>
+                        <option value="0" {% if location_precision == 0 %}selected{% endif %}>最低精度（整数，约111公里）</option>
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        当前设置：
+                        {% if location_precision == -1 %}
+                            不保护（完整GPS坐标）
+                        {% elif location_precision == 0 %}
+                            整数精度（约111公里）
+                        {% elif location_precision == 1 %}
+                            小数点后1位（约11公里）
+                        {% elif location_precision == 2 %}
+                            小数点后2位（约1.1公里）
+                        {% elif location_precision == 3 %}
+                            小数点后3位（约110米）
+                        {% else %}
+                            小数点后1位（约11公里，默认）
+                        {% endif %}
+                    </small>
+                </div>
+                <div class="form-group">
+                    <button type="submit" style="background-color: #007acc;">保存设置</button>
+                </div>
+            </form>
+        </div>
+
         <a href="/admin/device_register" class="back-link">注册设备</a>
         <a href="/admin/taskcenter" class="back-link">任务中心</a>
         <a href="/dashboard" class="back-link">← 返回 Dashboard</a>

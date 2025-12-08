@@ -316,12 +316,20 @@ async def uploadLocationInfo(request: Request):
         if float(req_data.get("latitude"))==0 and float(req_data.get("longitude"))==0:
             raise ValueError("invalid latitude or longitude")
 
-        # 降低经纬度精度以保护隐私（小数点后1位，约11公里精度）
+        # 从配置读取GPS精度保护设置（默认1位小数）
+        # -1 表示不保护（原始精度），0/1/2/3 表示小数点后位数
+        location_precision = GLOBAL_CONFIG.get("location_precision", 1)
+
         original_lat = req_data.get("latitude")
         original_lon = req_data.get("longitude")
-        reduced_lat, reduced_lon = reduce_location_precision(original_lat, original_lon, precision=1)
 
-        print(f"[Privacy] Original: ({original_lat}, {original_lon}) -> Reduced: ({reduced_lat}, {reduced_lon})")
+        # 如果配置为-1，不做精度降低处理
+        if location_precision == -1:
+            reduced_lat, reduced_lon = original_lat, original_lon
+            print(f"[Privacy] Location protection disabled, using original coordinates: ({original_lat}, {original_lon})")
+        else:
+            reduced_lat, reduced_lon = reduce_location_precision(original_lat, original_lon, precision=location_precision)
+            print(f"[Privacy] Precision={location_precision}, Original: ({original_lat}, {original_lon}) -> Reduced: ({reduced_lat}, {reduced_lon})")
 
         location_data = {
             "latitude": reduced_lat,
@@ -617,11 +625,41 @@ async def admin_dashboard(request: Request):
         if data_memory_cache.get_device_entry(device_id) is not None
     }
 
+    # 获取当前GPS精度设置
+    location_precision = GLOBAL_CONFIG.get("location_precision", 1)
+
     return templates.TemplateResponse("admin_dashboard.html", {
         "request": request,
         "username": username,
-        "devices": devices
+        "devices": devices,
+        "location_precision": location_precision
     })
+
+@app.post("/admin/update_location_precision")
+async def update_location_precision(
+    request: Request,
+    username: str = Form(...),
+    location_precision: int = Form(...)
+):
+    """更新GPS位置精度设置"""
+    # 验证登录
+    logged_in_user = get_logged_in_user(request)
+    if not logged_in_user or logged_in_user != username:
+        return RedirectResponse("/admin/login", status_code=303)
+
+    # 验证精度值范围
+    if location_precision not in [-1, 0, 1, 2, 3]:
+        return RedirectResponse("/admin/dashboard?error=invalid_precision", status_code=303)
+
+    # 更新配置
+    GLOBAL_CONFIG["location_precision"] = location_precision
+    save_global_config_atomic()
+
+    print(f"[Config] GPS精度已更新为: {location_precision} (用户: {username})")
+
+    # 重定向回管理后台
+    return RedirectResponse("/admin/dashboard", status_code=303)
+
 
 @app.post("/admin/change_password", response_class=HTMLResponse)
 async def change_password(
