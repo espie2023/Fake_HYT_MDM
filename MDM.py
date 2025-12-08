@@ -476,10 +476,16 @@ async def view_device(
 
 @app.get("/device/deviceinfo", response_class=HTMLResponse)
 async def verify_device_sn(
+    request: Request,
     deviceid: str = Query(...),
     timestamp: int = Query(...),
     sn_hash: str = Query(...)
 ):
+    # 安全检查：必须登录才能访问设备详细信息
+    username = get_logged_in_user(request)
+    if not username:
+        return HTMLResponse("<h3>访问被拒绝</h3><p>您必须登录才能查看设备详细信息</p><a href='/admin/login'>前往登录</a>", status_code=403)
+
     entry = data_memory_cache.get_device_entry(deviceid)
     if not entry:
         return HTMLResponse("<h3>设备不存在</h3>", status_code=404)
@@ -487,6 +493,11 @@ async def verify_device_sn(
     real_sn = entry.get("sn")
     if not real_sn:
         return HTMLResponse("<h3>设备未注册 SN</h3>", status_code=400)
+
+    # 权限检查：验证用户是否有权访问该设备
+    device_scope = get_user_device_scope(username)
+    if "any" not in device_scope and deviceid not in device_scope:
+        return HTMLResponse("<h3>访问被拒绝</h3><p>您没有权限访问此设备</p><a href='/admin/dashboard'>返回</a>", status_code=403)
 
     now = int(time.time())
     if abs(now - timestamp) > 900:  # 超过±15分钟
